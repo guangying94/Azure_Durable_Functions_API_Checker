@@ -17,4 +17,4 @@ api1,api2,api3
 In this example, the backend API is just an echo. This orchestrator will call the REST api with random string (random integer) and check the return result to make sure the API is working as intended. It will then return boolean (0 or 1 for ease of aggregation) on the outcome.
 
 ## Medium Post
-Full technical details and use case scenario can be found here.
+Full technical details and use case scenario can be found here: [Bulk Test APIs Before Production — Azure DevOps Release Gate With Azure Durable Functions](https://marcustee.medium.com/bulk-test-apis-before-production-azure-devops-release-gate-with-azure-durable-functions-f0a02ee04e34)
