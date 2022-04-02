@@ -21,30 +21,41 @@ namespace DeploymentGateCheck
         [FunctionName("Orchestrator")]
         public static async Task<List<APICheckObject>> RunOrchestrator(
             [OrchestrationTrigger] IDurableOrchestrationContext context)
-        {   
-            var name = context.GetInput<List<APICheckObject>>();
-
+        {
             List<APICheckObject> apiChecks = new List<APICheckObject> { };
             List<string> api_endpoints = api_list.Split(",").ToList();
+           
+           //using fan out/fan in patterns
+            var parrallel_tasks = new List<Task<APICheckObject>>();
 
+            for(int i = 0; i < api_endpoints.Count; i++)
+            {
+                Task<APICheckObject> task = context.CallActivityAsync<APICheckObject>(
+                    "HealthCheck_Executor",api_endpoints[i]);
+                parrallel_tasks.Add(task);
+            }
+            await Task.WhenAll(parrallel_tasks);
+
+            apiChecks = parrallel_tasks.Select(task => task.Result).ToList();
+
+            return apiChecks;
+            
+            //an example of using function chaining
+            /*
             foreach(string api_endpoint in api_endpoints)
             {
-                int _res = await context.CallActivityAsync<int>("HealthCheck_Executor", api_endpoint);
-                APICheckObject _apiOutput = new APICheckObject()
-                {
-                    ApiName = api_endpoint,
-                    ApiStatus = _res
-                };
+                APICheckObject _apiOutput = await context.CallActivityAsync<APICheckObject>("HealthCheck_Executor", api_endpoint);
+
 
                 apiChecks.Add(_apiOutput);
             }
 
             return apiChecks;
-                
+            */  
         }
 
         [FunctionName("HealthCheck_Executor")]
-        public static async Task<int> CallHealthEndpoint([ActivityTrigger] string apiName, ILogger log)
+        public static async Task<APICheckObject> CallHealthEndpoint([ActivityTrigger] string apiName, ILogger log)
         {
             HttpClient client = new HttpClient();
             //sample test API to echo message
@@ -62,22 +73,37 @@ namespace DeploymentGateCheck
                 JObject result = JObject.Parse(api_result);
                 if((string)result["message"] == randomString)
                 {
-                    return 1;
+                    APICheckObject apiOutput = new APICheckObject()
+                    {
+                        ApiName = apiName,
+                        ApiStatus = 1
+                    };
+                    return apiOutput;
                 }
                 else
                 {
-                    return 0;
+                    APICheckObject apiOutput = new APICheckObject()
+                    {
+                        ApiName = apiName,
+                        ApiStatus = 0
+                    };
+                    return apiOutput;
                 }
             }
             else
             {
-                return 0;
+                APICheckObject apiOutput = new APICheckObject()
+                {
+                    ApiName = apiName,
+                    ApiStatus = 0
+                };
+                return apiOutput;
             }
         }
 
         [FunctionName("HealthCheck_HttpStart")]
         public static async Task<HttpResponseMessage> HttpStart(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestMessage req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestMessage req,
             [DurableClient] IDurableOrchestrationClient starter,
             ILogger log)
         {

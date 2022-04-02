@@ -365,3 +365,6 @@ FodyWeavers.xsd
 
 ## Properties files
 Properties/
+
+## VS Code
+.vscode

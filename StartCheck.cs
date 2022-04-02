@@ -26,7 +26,7 @@ namespace DeploymentGateCheck
             log.LogInformation("C# HTTP trigger function processed a request.");
 
             HttpClient client = new HttpClient();
-            var response = await client.PostAsync(orchestrator_url);
+            var response = await client.GetAsync(orchestrator_url);
             var _result = await response.Content.ReadAsStringAsync();
 
             dynamic data = JsonConvert.DeserializeObject(_result);
